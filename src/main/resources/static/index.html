@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Mini Bank</title>
+
+    <style>
+
+        body {
+            font-family: Arial;
+            margin: 30px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        input, select, button {
+            padding: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .pool-title {
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .pool-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .pool-card {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 180px;
+        }
+
+        .pool-card h3 {
+            margin-bottom: 10px;
+        }
+
+        .pool-card p {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .refresh-button {
+            display: block;
+            margin: 20px auto;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<h1>Mini Bank Management System</h1>
+
+
+<div class="controls">
+
+    <input
+        type="text"
+        id="search"
+        placeholder="Search account holder">
+
+    <button onclick="searchAccounts()">
+        Search
+    </button>
+
+    <button onclick="loadAccounts()">
+        All Accounts
+    </button>
+
+    <select id="sortBy">
+
+        <option value="id">ID</option>
+
+        <option value="name">Name</option>
+
+        <option value="balance">Balance</option>
+
+        <option value="accountType">Account Type</option>
+
+    </select>
+
+    <select id="direction">
+
+        <option value="asc">Ascending</option>
+
+        <option value="desc">Descending</option>
+
+    </select>
+
+    <select id="size">
+
+        <option value="2">2</option>
+
+        <option value="5">5</option>
+
+        <option value="10">10</option>
+
+    </select>
+
+    <button onclick="loadAccounts()">
+        Sort
+    </button>
+
+</div>
+
+
+<table>
+
+    <thead>
+
+    <tr>
+
+        <th>ID</th>
+
+        <th>Account Number</th>
+
+        <th>Name</th>
+
+        <th>Email</th>
+
+        <th>Phone</th>
+
+        <th>Balance</th>
+
+        <th>Account Type</th>
+
+    </tr>
+
+    </thead>
+
+    <tbody id="accountTable">
+
+    </tbody>
+
+</table>
+
+
+<div class="pagination">
+
+    <button onclick="previousPage()">
+        Previous
+    </button>
+
+    <span id="pageNumber">
+        Page 1
+    </span>
+
+    <button onclick="nextPage()">
+        Next
+    </button>
+
+</div>
+
+
+<h2 class="pool-title">
+    Connection Pool Status
+</h2>
+
+
+<div class="pool-container">
+
+    <div class="pool-card">
+
+        <h3>Active Connections</h3>
+
+        <p id="activeConnections">
+            Loading...
+        </p>
+
+    </div>
+
+
+    <div class="pool-card">
+
+        <h3>Idle Connections</h3>
+
+        <p id="idleConnections">
+            Loading...
+        </p>
+
+    </div>
+
+
+    <div class="pool-card">
+
+        <h3>Maximum Connections</h3>
+
+        <p id="maxConnections">
+            Loading...
+        </p>
+
+    </div>
+
+
+    <div class="pool-card">
+
+        <h3>Minimum Connections</h3>
+
+        <p id="minConnections">
+            Loading...
+        </p>
+
+    </div>
+
+</div>
+
+
+<button
+    class="refresh-button"
+    onclick="loadConnectionPool()">
+
+    Refresh Connection Pool
+
+</button>
+
+
+<script>
+
+    let currentPage = 0;
+
+    let totalPages = 0;
+
+
+    function loadAccounts() {
+
+        const size =
+            document.getElementById("size").value;
+
+        const sortBy =
+            document.getElementById("sortBy").value;
+
+        const direction =
+            document.getElementById("direction").value;
+
+
+        fetch(
+            `/api/accounts?page=${currentPage}&size=${size}&sortBy=${sortBy}&direction=${direction}`
+        )
+
+        .then(response => response.json())
+
+        .then(data => {
+
+            displayAccounts(data);
+
+        })
+
+        .catch(error => {
+
+            console.log(error);
+
+        });
+
+    }
+
+
+    function searchAccounts() {
+
+        currentPage = 0;
+
+
+        const name =
+            document.getElementById("search").value;
+
+        const size =
+            document.getElementById("size").value;
+
+        const sortBy =
+            document.getElementById("sortBy").value;
+
+        const direction =
+            document.getElementById("direction").value;
+
+
+        if (name.trim() === "") {
+
+            loadAccounts();
+
+            return;
+
+        }
+
+
+        fetch(
+            `/api/accounts/search?name=${encodeURIComponent(name)}&page=${currentPage}&size=${size}&sortBy=${sortBy}&direction=${direction}`
+        )
+
+        .then(response => response.json())
+
+        .then(data => {
+
+            displayAccounts(data);
+
+        })
+
+        .catch(error => {
+
+            console.log(error);
+
+        });
+
+    }
+
+
+    function displayAccounts(data) {
+
+        const table =
+            document.getElementById("accountTable");
+
+
+        table.innerHTML = "";
+
+
+        data.content.forEach(account => {
+
+            const row = `
+
+                <tr>
+
+                    <td>${account.id}</td>
+
+                    <td>${account.accountNumber}</td>
+
+                    <td>${account.name}</td>
+
+                    <td>${account.email}</td>
+
+                    <td>${account.phone}</td>
+
+                    <td>&#8377; ${account.balance}</td>
+
+                    <td>${account.accountType}</td>
+
+                </tr>
+
+            `;
+
+
+            table.innerHTML += row;
+
+        });
+
+
+        totalPages = data.totalPages;
+
+
+        document.getElementById("pageNumber").innerText =
+
+            `Page ${currentPage + 1} of ${totalPages}`;
+
+    }
+
+
+    function nextPage() {
+
+        if (currentPage < totalPages - 1) {
+
+            currentPage++;
+
+
+            if (
+                document.getElementById("search")
+                    .value.trim() !== ""
+            ) {
+
+                searchAccounts();
+
+            } else {
+
+                loadAccounts();
+
+            }
+
+        }
+
+    }
+
+
+    function previousPage() {
+
+        if (currentPage > 0) {
+
+            currentPage--;
+
+
+            if (
+                document.getElementById("search")
+                    .value.trim() !== ""
+            ) {
+
+                searchAccounts();
+
+            } else {
+
+                loadAccounts();
+
+            }
+
+        }
+
+    }
+
+
+    async function loadConnectionPool() {
+
+        try {
+
+            const activeResponse =
+                await fetch(
+                    "/actuator/metrics/hikaricp.connections.active"
+                );
+
+
+            const idleResponse =
+                await fetch(
+                    "/actuator/metrics/hikaricp.connections.idle"
+                );
+
+
+            const maxResponse =
+                await fetch(
+                    "/actuator/metrics/hikaricp.connections.max"
+                );
+
+
+            const minResponse =
+                await fetch(
+                    "/actuator/metrics/hikaricp.connections.min"
+                );
+
+
+            const activeData =
+                await activeResponse.json();
+
+            const idleData =
+                await idleResponse.json();
+
+            const maxData =
+                await maxResponse.json();
+
+            const minData =
+                await minResponse.json();
+
+
+            document.getElementById(
+                "activeConnections"
+            ).textContent =
+                activeData.measurements[0].value;
+
+
+            document.getElementById(
+                "idleConnections"
+            ).textContent =
+                idleData.measurements[0].value;
+
+
+            document.getElementById(
+                "maxConnections"
+            ).textContent =
+                maxData.measurements[0].value;
+
+
+            document.getElementById(
+                "minConnections"
+            ).textContent =
+                minData.measurements[0].value;
+
+        }
+
+        catch (error) {
+
+            console.log(
+                "Error loading connection pool:",
+                error
+            );
+
+            document.getElementById(
+                "activeConnections"
+            ).textContent = "Error";
+
+            document.getElementById(
+                "idleConnections"
+            ).textContent = "Error";
+
+            document.getElementById(
+                "maxConnections"
+            ).textContent = "Error";
+
+            document.getElementById(
+                "minConnections"
+            ).textContent = "Error";
+
+        }
+
+    }
+
+
+    loadAccounts();
+
+    loadConnectionPool();
+
+</script>
+
+</body>
+
+</html>
